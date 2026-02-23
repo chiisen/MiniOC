@@ -25,7 +25,7 @@
 2. **呼叫 AI 引擎 (單一環境 Node.js Process)**:
    - 使用 Node.js 的 `child_process.spawn` 或 `child_process.exec`。
    - 透過注入**環境變數**讓 `opencode` 連線至自訂大模型 (如 MinMax M2.5)：
-     確保啟動選項中包含 `ANTHROPIC_BASE_URL` (相容位址) 與 `ANTHROPIC_API_KEY`。
+     確保啟動選項中包含 `MINIOC_BASE_URL` (相容位址) 與 `MINIOC_API_KEY`。
    - 直接在背景呼叫 `npx opencode` (務必帶上 `--yes` 或相關非互動式參數，避免 CLI 卡死)。
    - **互動機制 (Stdin & IPC)**: 將需要 AI 處理的對話上下文透過 `stdin` (標準輸入) 餵給 `opencode`，或是將 Prompt 寫入暫存檔案後讓 `opencode` 讀取。
 

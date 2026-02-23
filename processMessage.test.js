@@ -1,0 +1,106 @@
+const { processMessage, buildPrompt } = require('./src/ai');
+
+jest.mock('child_process', () => ({
+    spawn: jest.fn()
+}));
+
+const { spawn } = require('child_process');
+
+describe('ai.js - processMessage', () => {
+    beforeEach(() => {
+        spawn.mockReset();
+    });
+
+    test('processMessage should call opencode with correct prompt', async () => {
+        const mockChild = {
+            stdout: { on: jest.fn((event, cb) => cb('Hello from AI')) },
+            stderr: { on: jest.fn() },
+            on: jest.fn((event, cb) => {
+                if (event === 'close') cb(0);
+            })
+        };
+        spawn.mockReturnValue(mockChild);
+
+        const history = [{ role: 'user', content: 'Hi' }];
+        const result = await processMessage(123, 'Hello', history);
+
+        expect(spawn).toHaveBeenCalledWith('opencode', ['run', '--format', 'json', '--', expect.any(String)], { env: expect.any(Object) });
+        expect(result).toBe('Hello from AI');
+    });
+
+    test('processMessage should set correct environment variables', async () => {
+        process.env.MINIOC_API_KEY = 'test-key';
+        process.env.MINIOC_BASE_URL = 'https://test.api';
+        process.env.MINIOC_MODEL = 'test-model';
+
+        const mockChild = {
+            stdout: { on: jest.fn((event, cb) => cb('response')) },
+            stderr: { on: jest.fn() },
+            on: jest.fn((event, cb) => cb(0))
+        };
+        spawn.mockReturnValue(mockChild);
+
+        await processMessage(123, 'test', []);
+
+        const callArgs = spawn.mock.calls[0];
+        const env = callArgs[2].env;
+
+        expect(env.ANTHROPIC_AUTH_TOKEN).toBe('test-key');
+        expect(env.ANTHROPIC_BASE_URL).toBe('https://test.api');
+        expect(env.OPENCODE_MODEL).toBe('test-model');
+    });
+
+    test('processMessage should handle opencode error', async () => {
+        const mockChild = {
+            stdout: { on: jest.fn((event, cb) => cb('Positionals: error')) },
+            stderr: { on: jest.fn((event, cb) => cb('error message')) },
+            on: jest.fn((event, cb) => cb(1))
+        };
+        spawn.mockReturnValue(mockChild);
+
+        await expect(processMessage(123, 'test', [])).rejects.toThrow('error message');
+    });
+
+    test('processMessage should clean ANSI escape codes', async () => {
+        const mockChild = {
+            stdout: { on: jest.fn((event, cb) => cb('\x1b[32mGreen text\x1b[0m')) },
+            stderr: { on: jest.fn() },
+            on: jest.fn((event, cb) => cb(0))
+        };
+        spawn.mockReturnValue(mockChild);
+
+        const result = await processMessage(123, 'test', []);
+        expect(result).toBe('Green text');
+    });
+
+    test('processMessage should timeout after 60 seconds', async () => {
+        jest.useFakeTimers();
+        
+        const mockKill = jest.fn().mockReturnValue(true);
+        let closeCallback;
+        const mockChild = {
+            stdout: { on: jest.fn() },
+            stderr: { on: jest.fn() },
+            on: jest.fn((event, cb) => {
+                if (event === 'close') closeCallback = cb;
+            }),
+            kill: mockKill
+        };
+        spawn.mockReturnValue(mockChild);
+
+        const promise = processMessage(123, 'test', []);
+        
+        jest.advanceTimersByTime(60001);
+        
+        await expect(promise).rejects.toThrow('opencode timed out after 60 seconds');
+        expect(mockKill).toHaveBeenCalled();
+        
+        jest.useRealTimers();
+        
+        if (closeCallback) closeCallback(0);
+    });
+
+    afterAll(() => {
+        jest.clearAllTimers();
+    });
+});
