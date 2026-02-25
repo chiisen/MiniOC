@@ -1,5 +1,11 @@
 # MiniOC
-迷你 OC（Mini OpenCode）- 使用 OpenCode 作為思考引擎的 Telegram AI 代理
+**迷你 OC（Mini OpenCode）** —— 將強大的 OpenCode 思考引擎裝進你的 Telegram！透過 Docker 容器化確保絕對安全，打造最輕巧、易用且專屬於你的 AI 助手。
+
+## 💡 專案優勢
+
+- 🛡️ **高安全性**：透過 Docker 容器化部署 OpenCode 與執行環境，完全隔離宿主機，保障系統與資料安全。
+- 📱 **極致便利**：完美結合 Telegram，不論手機或電腦，隨時隨地無縫呼叫你的專屬 AI 助理。
+- 🔧 **易於維護擴充**：核心程式碼簡短精煉（Mini），架構平易近人，開發者能輕鬆讀懂、維護並進行二次開發。
 
 ## 功能
 
