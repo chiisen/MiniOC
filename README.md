@@ -72,6 +72,12 @@ docker-compose restart
 ### Chat 模式（不透過 Telegram）
 
 ```bash
+# 互動式對話（無限迴圈，輸入 exit 離開）
+npm run chat:local
+
+# 單次對話
+npm run chat:local -- "Hello"
+
 # 在 Docker 容器內直接與 AI 對話
 docker exec minioc npm run chat -- "Hello"
 ```
