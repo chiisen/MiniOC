@@ -59,11 +59,43 @@ MiniOC/
 │   ├── index.js      # 入口點
 │   ├── bot.js        # Telegram 機器人處理
 │   ├── ai.js         # OpenCode AI 整合
-│   └── db.js         # SQLite 資料庫操作
-├── data/             # 資料庫檔案
+│   ├── db.js         # SQLite 資料庫操作
+│   └── logger.js     # 日誌模組
+├── data/             # 資料庫與日誌檔案
 ├── docker-compose.yml
 └── package.json
 ```
+
+## 測試
+
+### 執行測試
+```bash
+npm test              # 執行所有測試
+npm run test:watch    # 監聽模式（檔案變更時自動重新執行）
+```
+
+### 涵蓋率報告
+```bash
+npx jest --coverage
+```
+
+### 測試結果
+```
+Test Suites: 3 passed, 3 total
+Tests:       16 passed, 16 total
+
+涵蓋率：
+- ai.js:     ~70%
+- db.js:     ~73%
+- logger.js: ~60%
+```
+
+### 測試檔案
+| 檔案 | 說明 |
+|------|------|
+| `db.test.js` | 資料庫操作測試 |
+| `ai.js.test.js` | AI 處理測試 |
+| `processMessage.test.js` | 訊息處理測試 |
 
 ## License
 
