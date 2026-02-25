@@ -20,8 +20,9 @@ npm install
 ```
 TELEGRAM_BOT_TOKEN=你的機器人Token
 MINIOC_API_KEY=你的API金鑰
-MINIOC_BASE_URL=https://api.minimax.io/anthropic
+MINIOC_BASE_URL=https://api.minimax.io
 MINIOC_MODEL=MiniMax-M2.5
+# 或使用免費模型：opencode/minimax-m2.5-free
 ```
 
 ### 3. 啟動機器人
@@ -29,6 +30,55 @@ MINIOC_MODEL=MiniMax-M2.5
 npm run dev    # 開發模式（自動重啟）
 npm start      # 生產模式
 ```
+
+---
+
+## Docker 部署
+
+### 環境變數
+
+| 變數 | 說明 | 預設值 |
+|------|------|--------|
+| `TELEGRAM_BOT_TOKEN` | Telegram Bot Token | - |
+| `MINIOC_API_KEY` | MiniMax API 金鑰 | - |
+| `MINIOC_BASE_URL` | API 端點 | `https://api.minimax.io` |
+| `MINIOC_MODEL` | 模型名稱 | `MiniMax-M2.5` |
+
+**可用模型**：
+- `MiniMax-M2.5` - 付費版（需 API Key）
+- `MiniMax-M2.5-highspeed` - 付費极速版
+- `MiniMax-M2.1` - 付費版
+- `opencode/minimax-m2.5-free` - 免費版（透過 OpenCode）
+
+### Docker 指令
+
+```bash
+# 構建映像
+docker-compose build
+
+# 啟動容器
+docker-compose up -d
+
+# 查看日誌
+docker logs minioc
+
+# 停止容器
+docker-compose down
+
+# 重啟容器
+docker-compose restart
+```
+
+### Chat 模式（不透過 Telegram）
+
+```bash
+# 在 Docker 容器內直接與 AI 對話
+docker exec minioc npm run chat -- "Hello"
+```
+
+### 驗證 Telegram 連接
+
+參考 [TELEGRAM_VERIFY.md](./TELEGRAM_VERIFY.md) 進行分階段驗證：
 
 ## 指令
 

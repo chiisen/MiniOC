@@ -16,10 +16,12 @@ async function initBot() {
     
     const botOptions = {
         polling: {
-            autoStart: false
+            autoStart: false,
+            timeout: 30,
+            limit: 100
         },
         request: {
-            timeout: 10000,
+            timeout: 30000,
             family: 4
         }
     };
