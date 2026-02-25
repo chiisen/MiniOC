@@ -9,7 +9,7 @@ function buildPrompt(userId, message, history) {
 async function callMiniMaxAPI(apiKey, baseURL, model, prompt) {
     return new Promise((resolve, reject) => {
         const url = new URL('/v1/text/chatcompletion', baseURL);
-        
+
         const postData = JSON.stringify({
             model: model,
             messages: [{ role: 'user', content: prompt }]
@@ -62,11 +62,11 @@ async function callMiniMaxAPI(apiKey, baseURL, model, prompt) {
 async function callOpenCode(model, prompt) {
     return new Promise((resolve, reject) => {
         const args = ['run', '--format', 'json'];
-        
+
         if (model) {
             args.push('--model', model);
         }
-        
+
         args.push('--', prompt);
 
         const customEnv = {
@@ -75,10 +75,12 @@ async function callOpenCode(model, prompt) {
             ANTHROPIC_AUTH_TOKEN: process.env.MINIOC_API_KEY
         };
 
-        logger.debug(`OpenCode - MODEL: ${model}`);
+        // Use 'sh -c' to pipe 'yes' into opencode to bypass interactive prompts automatically
+        const command = `yes | opencode ${args.map(a => `"${a.replace(/"/g, '\\"')}"`).join(' ')}`;
+        logger.debug(`Executing: ${command}`);
 
-        const child = spawn('opencode', args, { env: customEnv, stdio: ['ignore', 'pipe', 'pipe'] });
-        
+        const child = spawn('sh', ['-c', command], { env: customEnv });
+
         let stdout = '';
         let stderr = '';
         let timeoutId;
@@ -101,15 +103,15 @@ async function callOpenCode(model, prompt) {
 
         child.on('close', (code) => {
             clearTimeout(timeoutId);
-            
+
             if (code !== 0) {
                 logger.error(`opencode exited with code ${code}`);
                 reject(new Error(stderr || `opencode failed with exit code ${code}`));
                 return;
             }
-            
+
             let cleanOutput = stdout.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '').trim();
-            
+
             try {
                 const lines = cleanOutput.split('\n');
                 for (const line of lines) {
@@ -122,7 +124,7 @@ async function callOpenCode(model, prompt) {
             } catch (e) {
                 // Not JSON, use as-is
             }
-            
+
             resolve(cleanOutput);
         });
 

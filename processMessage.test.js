@@ -11,7 +11,7 @@ describe('ai.js - processMessage', () => {
         spawn.mockReset();
         process.env.MINIOC_API_KEY = 'test-key';
         process.env.MINIOC_BASE_URL = 'https://test.api';
-        process.env.MINIOC_MODEL = 'test-model';
+        process.env.MINIOC_MODEL = 'opencode/test-model';
     });
 
     test('processMessage should call opencode with correct prompt', async () => {
@@ -27,7 +27,8 @@ describe('ai.js - processMessage', () => {
         const history = [{ role: 'user', content: 'Hi' }];
         const result = await processMessage(123, 'Hello', history);
 
-        expect(spawn).toHaveBeenCalledWith('opencode', ['run', '--format', 'json', '--', expect.any(String)], { env: expect.any(Object) });
+        const expectedCommand = `yes | opencode "run" "--format" "json" "--model" "opencode/test-model" "--" "User: Hello\nPlease provide a short response:"`;
+        expect(spawn).toHaveBeenCalledWith('sh', ['-c', expectedCommand], { env: expect.any(Object) });
         expect(result).toBe('Hello from AI');
     });
 
@@ -48,7 +49,6 @@ describe('ai.js - processMessage', () => {
 
         expect(env.ANTHROPIC_AUTH_TOKEN).toBe('test-key');
         expect(env.ANTHROPIC_BASE_URL).toBe('https://test.api');
-        expect(env.OPENCODE_MODEL).toBe('test-model');
     });
 
     test('processMessage should handle opencode error', async () => {
@@ -80,7 +80,7 @@ describe('ai.js - processMessage', () => {
 
     test('processMessage should timeout after 60 seconds', async () => {
         jest.useFakeTimers();
-        
+
         const mockKill = jest.fn().mockReturnValue(true);
         let closeCallback;
         const mockChild = {
@@ -94,14 +94,14 @@ describe('ai.js - processMessage', () => {
         spawn.mockReturnValue(mockChild);
 
         const promise = processMessage(123, 'test', []);
-        
+
         jest.advanceTimersByTime(60001);
-        
+
         await expect(promise).rejects.toThrow('opencode timed out after 60 seconds');
         expect(mockKill).toHaveBeenCalled();
-        
+
         jest.useRealTimers();
-        
+
         if (closeCallback) closeCallback(0);
     });
 
@@ -115,7 +115,7 @@ describe('ai.js - processMessage', () => {
         };
         spawn.mockReturnValue(mockChild);
 
-        await expect(processMessage(123, 'test', [])).rejects.toThrow('Authentication failed');
+        await expect(processMessage(123, 'test', [])).rejects.toThrow('authentication failed');
     });
 
     test('processMessage should handle rate limit error', async () => {
@@ -128,7 +128,7 @@ describe('ai.js - processMessage', () => {
         };
         spawn.mockReturnValue(mockChild);
 
-        await expect(processMessage(123, 'test', [])).rejects.toThrow('Rate limit exceeded');
+        await expect(processMessage(123, 'test', [])).rejects.toThrow('rate limit exceeded');
     });
 
     test('processMessage should handle generic error', async () => {
