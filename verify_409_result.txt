@@ -1,0 +1,120 @@
+hello! today's lucky theme is: pararussel.omp.json :)
+>> 💯 code $profile 指令可以編輯自動啟動的設定檔案
+>> 💯 升級 powershell-core: 'choco upgrade powershell-core'
+>> 💯 啟動 MSSQL: 'net start MSSQLserver'
+>> 💯 啟動 MongoDB: 'net start MongoDB'
+>> 💯 啟動 postgresql: 'net start postgresql-x64-17'
+>> 💯 啟動 MySQL: 'net start MySQL84'
+>> 💯 啟動 MariaDB: 'net start MariaDB'
+>> 💯 更新 gcloud: 'gcloud components update'
+Set-PSReadLineOption: C:\Users\chiis\Documents\PowerShell\Microsoft.PowerShell_profile.ps1:33:1
+Line |
+  33 |  Set-PSReadLineOption -PredictionSource History
+     |  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | The predictive suggestion
+     | feature cannot be enabled
+     | because the console output
+     | doesn't support virtual terminal
+     | processing or it's redirected.
+PATH -= $env:LOCALAPPDATA\nvs\node\22.21.1\x64
+PATH += $env:LOCALAPPDATA\nvs\node\22.21.1\x64
+>#node/22.21.1/x64 (Jod)
+  node/20.19.4/x64 (Iron)
+  node/18.20.8/x64 (Hydrogen)
+  node/16.20.2/x64 (Gallium)
+  node/14.21.3/x64 (Fermium)
+  node/12.22.12/x64 (Erbium)
+  node/10.24.1/x64 (Dubnium)
+>> 💯 nvs ========
+  2.7.18
+* 3.11.9 (set by D:\github\chiisen\MiniOC\.python-version)
+>> 💯 pyenv ========
+🔑 Token 已讀取 (前 10 碼): 7896150034...
+
+══════════════════════════════════════
+  Phase 1: 多實例偵測
+══════════════════════════════════════
+  ℹ️  檢查 Docker 容器...
+  ⚠️  偵測到 Docker 容器運行中: minioc
+  ℹ️  檢查本地 Node 進程...
+  ✅ 無本地 Node 進程
+  ℹ️  檢查 Lock 檔案...
+  ⚠️  Lock 檔案存在但進程已死亡 (殘留 Lock，PID: 17)
+  ℹ️  單一實例運行中，排除多實例衝突 → 進入 Phase 2
+
+══════════════════════════════════════
+  Phase 2: Telegram 服務端 getUpdates 驗證
+══════════════════════════════════════
+  ℹ️  正在呼叫 getUpdates (timeout=1)...
+  ❌ HTTP 請求失敗: Response status code does not indicate success: 409 (Conflict).
+
+══════════════════════════════════════
+  Phase 3: Webhook 狀態驗證
+══════════════════════════════════════
+  ℹ️  正在呼叫 getWebhookInfo...
+  ✅ 無 Webhook 設定（純 Polling 模式）
+
+══════════════════════════════════════
+  Phase 4: 程式碼層面診斷
+══════════════════════════════════════
+  ℹ️  檢查 bot.js 中的啟動等待時間...
+  ✅ bot.js 啟動等待時間 35000ms >= 30000ms ✓
+  ⚠️  bot.js 啟動等待時間 3000ms < 30000ms (Telegram Long Polling timeout)
+  ⚠️  bot.js 啟動等待時間 5000ms < 30000ms (Telegram Long Polling timeout)
+  ✅ polling_error 事件處理器存在
+  ℹ️  Recovery 重試邏輯：3 次嘗試
+  ℹ️  檢查 index.js 中的 Lock 機制...
+  ✅ Lock 檔案機制存在
+  ⚠️  注意：此 Lock 僅在同一主機有效，無法跨 Docker 容器偵測
+  ℹ️  檢查 better-sqlite3 原生模組...
+  ⚠️  better-sqlite3 是 Linux ELF 格式，在 Docker 外不可用（這是預期的）
+  ℹ️  若在 Docker 內出現錯誤，需在容器內執行: npm rebuild better-sqlite3
+
+══════════════════════════════════════
+  Phase 5: Docker 日誌分析
+══════════════════════════════════════
+  ℹ️  擷取最近 30 行 Docker 日誌...
+  ℹ️        _destdata: true,
+  ℹ️        _ended: true,
+  ℹ️        _callbackCalled: true,
+  ℹ️        [Symbol(shapeMode)]: false,
+  ℹ️        [Symbol(kCapture)]: false
+  ℹ️      },
+  ℹ️      toJSON: [Function: responseToJSON],
+  ℹ️      caseless: Caseless { dict: [Object] },
+  ℹ️      body: {
+  ℹ️        ok: false,
+  ❌ 日誌中發現 409:       error_code: 409,
+  ℹ️        description: 'Conflict: terminated by other getUpdates request; make sure that only one bot instance is running'
+  ℹ️      },
+  ℹ️      [Symbol(shapeMode)]: true,
+  ℹ️      [Symbol(kCapture)]: false,
+  ℹ️      [Symbol(kHeaders)]: {
+  ℹ️        server: 'nginx/1.18.0',
+  ℹ️        date: 'Wed, 25 Feb 2026 15:44:19 GMT',
+  ℹ️        'content-type': 'application/json',
+  ℹ️        'content-length': '143',
+  ℹ️        connection: 'keep-alive',
+  ℹ️        'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+  ℹ️        'access-control-allow-origin': '*',
+  ℹ️        'access-control-expose-headers': 'Content-Length,Content-Type,Date,Server,Connection'
+  ℹ️      },
+  ℹ️      [Symbol(kHeadersCount)]: 16,
+  ℹ️      [Symbol(kTrailers)]: null,
+  ℹ️      [Symbol(kTrailersCount)]: 0
+  ℹ️    }
+  ℹ️  }
+
+══════════════════════════════════════
+  診斷摘要
+══════════════════════════════════════
+
+  Phase 1 (多實例)  : ✅ 單一實例
+  Phase 2 (getUpdates): ⚠️  HTTP 錯誤
+  Phase 3 (Webhook)   : ✅ 無 Webhook
+
+── 建議行動 ──
+
+══════════════════════════════════════
+  驗證完成。修復請執行: .\fix_409.ps1
+══════════════════════════════════════

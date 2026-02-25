@@ -1,7 +1,6 @@
 FROM node:22-alpine
 
-RUN apk add --no-cache curl bash
-
+RUN apk add --no-cache curl bash python3 make g++
 RUN curl -fsSL https://opencode.ai/install | bash && \
     ln -sf /root/.opencode/bin/opencode /usr/local/bin/opencode
 

@@ -2,6 +2,10 @@ const TelegramBot = require('node-telegram-bot-api');
 const { processMessage } = require('./ai');
 const { getChatHistory, addMessage } = require('./db');
 const logger = require('./logger');
+const fs = require('fs');
+
+const isDocker = fs.existsSync('/.dockerenv');
+const envPrefix = isDocker ? '🐳 [Docker]' : '💻 [Local]';
 
 let bot;
 
@@ -13,7 +17,7 @@ async function initBot() {
     }
 
     logger.info('Initializing Telegram bot...');
-    
+
     const botOptions = {
         polling: {
             autoStart: false,
@@ -53,10 +57,10 @@ async function initBot() {
             bot.deleteWebHook(),
             new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
         ]);
-        
-        logger.info('Waiting for Telegram to release polling lock...');
-        await new Promise(r => setTimeout(r, 5000));
-        
+
+        logger.info('Waiting for Telegram to release polling lock (35s >= Long Polling timeout)...');
+        await new Promise(r => setTimeout(r, 35000));
+
         // 嘗試獲取所有待處理的 updates 並清除
         try {
             const updates = await Promise.race([
@@ -73,7 +77,7 @@ async function initBot() {
         } catch (e) {
             logger.warn('Failed to clear pending updates', e);
         }
-        
+
         logger.info('Webhook cleared, starting polling...');
     } catch (err) {
         logger.warn('Failed to reset webhook', err);
@@ -87,10 +91,10 @@ async function initBot() {
     bot.onText(/\/test409/, async (msg) => {
         const chatId = msg.chat.id;
         logger.info('Testing 409 recovery...');
-        
+
         try {
             await bot.sendMessage(chatId, '🧪 開始測試 409 錯誤處理...');
-            
+
             const error = new Error('409 Conflict: terminated by other getUpdates request');
             error.code = 409;
 
@@ -117,13 +121,13 @@ async function initBot() {
     bot.onText(/\/reset/, async (msg) => {
         const chatId = msg.chat.id;
         logger.info('Manual reset requested by user');
-        
+
         try {
             await bot.sendMessage(chatId, '🔄 正在重置 Bot...');
-            
+
             await bot.stopPolling();
             await bot.deleteWebHook();
-            
+
             try {
                 const updates = await bot.getUpdates({ limit: 1, timeout: 1 });
                 if (updates.length > 0) {
@@ -133,7 +137,7 @@ async function initBot() {
             } catch (e) {
                 logger.warn('Failed to clear pending updates during reset', e);
             }
-            
+
             await bot.startPolling();
             logger.success('Manual reset completed');
             await bot.sendMessage(chatId, '✅ Bot 重置完成！');
@@ -145,7 +149,7 @@ async function initBot() {
 
     bot.on('message', async (msg) => {
         logger.debug(`Raw message: ${JSON.stringify(msg).substring(0, 200)}`);
-        
+
         const chatId = msg.chat.id;
         const text = msg.text;
         const userId = msg.from.id;
@@ -170,17 +174,19 @@ async function initBot() {
 
             const cleanResponse = response.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '').trim();
 
+            const finalResponse = `${envPrefix}\n\n${cleanResponse}`;
+
             addMessage(userId, 'user', text);
             addMessage(userId, 'assistant', cleanResponse);
 
-            await bot.sendMessage(chatId, cleanResponse, { parse_mode: 'Markdown' });
+            await bot.sendMessage(chatId, finalResponse, { parse_mode: 'Markdown' });
 
             logger.success(`Response sent to user ${userId}`);
         } catch (error) {
             logger.error(`Error processing message from user ${userId}`, error);
-            
+
             let errorMessage = 'Sorry, something went wrong. Please try again.';
-            
+
             if (error.message.includes('Authentication failed')) {
                 errorMessage = 'AI service authentication failed. Please contact the administrator.';
                 logger.error('AI authentication failed - check MINIOC_API_KEY');
@@ -190,28 +196,28 @@ async function initBot() {
             } else if (error.message.includes('timed out')) {
                 errorMessage = 'AI response timed out. Please try again.';
             }
-            
+
             await bot.sendMessage(chatId, errorMessage);
         }
     });
 
     bot.on('polling_error', async (error) => {
-        const is409 = error.code === 409 || 
+        const is409 = error.code === 409 ||
             (error.response && error.response.body && error.response.body.error_code === 409);
-        
+
         if (is409) {
             logger.error('409 Conflict detected - Telegram polling conflict', error);
             logger.warn('Possible causes: multiple bot instances running or previous session not properly closed');
             logger.warn('Solution: Waiting for Telegram to release lock (usually takes 30 minutes max)');
-            
+
             for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
                     logger.info(`Recovery attempt ${attempt}/3...`);
                     await bot.stopPolling();
                     await bot.deleteWebHook();
-                    
+
                     await new Promise(r => setTimeout(r, 3000));
-                    
+
                     try {
                         const updates = await bot.getUpdates({ limit: 100, timeout: 30 });
                         if (updates && updates.length > 0) {
@@ -222,7 +228,7 @@ async function initBot() {
                     } catch (e) {
                         logger.warn(`Failed to clear updates on attempt ${attempt}`, e);
                     }
-                    
+
                     await bot.startPolling();
                     logger.success('Polling restarted successfully after 409 recovery');
                     return;
@@ -237,9 +243,9 @@ async function initBot() {
             logger.error('User should wait 30 minutes or restart the bot');
             return;
         }
-        
+
         logger.error(`Polling error: ${error.message}`, error);
-        
+
         if (error.message.includes('ETIMEDOUT')) {
             logger.warn('Connection timeout - check network');
         } else if (error.message.includes('ECONNRESET')) {
