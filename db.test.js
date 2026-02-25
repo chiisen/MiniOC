@@ -74,4 +74,8 @@ describe('db.js - Database Operations', () => {
         const closedDb = dbModule.getDatabase();
         expect(closedDb.open).toBe(false);
     });
+
+    test('closeDatabase should handle error when database is already closed', () => {
+        expect(() => dbModule.closeDatabase()).not.toThrow();
+    });
 });

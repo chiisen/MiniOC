@@ -105,6 +105,45 @@ describe('ai.js - processMessage', () => {
         if (closeCallback) closeCallback(0);
     });
 
+    test('processMessage should handle authentication error', async () => {
+        const mockChild = {
+            stdout: { on: jest.fn((event, cb) => cb('')) },
+            stderr: { on: jest.fn((event, cb) => cb('authentication failed')) },
+            on: jest.fn((event, cb) => {
+                if (event === 'close') cb(1);
+            })
+        };
+        spawn.mockReturnValue(mockChild);
+
+        await expect(processMessage(123, 'test', [])).rejects.toThrow('Authentication failed');
+    });
+
+    test('processMessage should handle rate limit error', async () => {
+        const mockChild = {
+            stdout: { on: jest.fn((event, cb) => cb('')) },
+            stderr: { on: jest.fn((event, cb) => cb('rate limit exceeded')) },
+            on: jest.fn((event, cb) => {
+                if (event === 'close') cb(1);
+            })
+        };
+        spawn.mockReturnValue(mockChild);
+
+        await expect(processMessage(123, 'test', [])).rejects.toThrow('Rate limit exceeded');
+    });
+
+    test('processMessage should handle generic error', async () => {
+        const mockChild = {
+            stdout: { on: jest.fn((event, cb) => cb('')) },
+            stderr: { on: jest.fn((event, cb) => cb('some other error')) },
+            on: jest.fn((event, cb) => {
+                if (event === 'close') cb(1);
+            })
+        };
+        spawn.mockReturnValue(mockChild);
+
+        await expect(processMessage(123, 'test', [])).rejects.toThrow();
+    });
+
     afterAll(() => {
         jest.clearAllTimers();
     });
