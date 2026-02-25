@@ -25,8 +25,8 @@
 ### 环境变量
 - [x] `TELEGRAM_BOT_TOKEN` 正确传递到容器
 - [x] `MINIOC_API_KEY` 正确传递到容器
-- [x] `MINIOC_BASE_URL` 正确传递到容器 (https://api.minimax.io/v1)
-- [x] `MINIOC_MODEL` 正确传递到容器 (MiniMax-M2.1)
+- [x] `MINIOC_BASE_URL` 正确传递到容器 (https://api.minimax.io/anthropic)
+- [x] `MINIOC_MODEL` 正确传递到容器 (opencode/minimax-m2.5-free)
 
 ### 网络与存储
 - [x] `network_mode: host` 正常工作
@@ -39,9 +39,9 @@
 
 ## 5. 端到端功能测试
 
-- [ ] Telegram Bot 能连接 Telegram 服务器 (需要真实 TOKEN 测试)
-- [ ] Bot 能接收和响应消息 (需要真实 TOKEN 测试)
-- [ ] AI API (MiniMax) 调用成功 (需要真实 API KEY 测试)
+- [ ] Telegram Bot 能连接 Telegram 服务器 (需要解决 409 Conflict - Token 在其他设备使用)
+- [ ] Bot 能接收和响应消息 (需要解决 Token 问题)
+- [x] AI API (MiniMax) 调用成功 (已测试 - "Hello! How can I help you today?")
 - [x] 数据库文件正确创建在 `./data` 目录 (conversation.db)
 - [x] 数据库持久化（重启后数据保留）
 
@@ -65,5 +65,7 @@
 **测试人员**: OpenCode
 
 **备注**: 
-- 部分功能需要真实 Telegram Bot Token 和 MiniMax API Key 才能完整测试
-- docker-compose.yml 中 version 属性已过时，建议移除
+- Telegram Bot 409 Conflict 错误：Token 在其他设备使用中，需关闭其他实例
+- 已修复 ai.js：添加 --model 参数和 stdio 选项以支持 opencode JSON 输出
+- .env 配置已更新：MINIOC_BASE_URL 和 MINIOC_MODEL
+- docker-compose.yml version 属性已移除

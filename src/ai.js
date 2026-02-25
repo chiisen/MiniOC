@@ -1,3 +1,4 @@
+const https = require('https');
 const { spawn } = require('child_process');
 const logger = require('./logger');
 
@@ -5,31 +6,78 @@ function buildPrompt(userId, message, history) {
     return `User: ${message}\nPlease provide a short response:`;
 }
 
-async function processMessage(userId, message, history) {
-    const prompt = buildPrompt(userId, message, history);
-    
+async function callMiniMaxAPI(apiKey, baseURL, model, prompt) {
     return new Promise((resolve, reject) => {
-        logger.info(`Processing message for user ${userId}`);
+        const url = new URL('/v1/text/chatcompletion', baseURL);
         
-        const args = ['run', '--format', 'json', '--', prompt];
+        const postData = JSON.stringify({
+            model: model,
+            messages: [{ role: 'user', content: prompt }]
+        });
+
+        const options = {
+            hostname: url.hostname,
+            path: url.pathname,
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(postData)
+            },
+            timeout: 60000
+        };
+
+        const req = https.request(options, (res) => {
+            let data = '';
+            res.on('data', (chunk) => data += chunk);
+            res.on('end', () => {
+                try {
+                    const result = JSON.parse(data);
+                    if (result.base_resp?.status_code && result.base_resp.status_code !== 0) {
+                        reject(new Error(`MiniMax API error: ${result.base_resp.status_msg}`));
+                        return;
+                    }
+                    if (result.reply) {
+                        resolve(result.reply);
+                    } else {
+                        resolve(data);
+                    }
+                } catch (e) {
+                    reject(new Error(`Failed to parse API response: ${e.message}`));
+                }
+            });
+        });
+
+        req.on('error', reject);
+        req.on('timeout', () => {
+            req.destroy();
+            reject(new Error('API request timed out'));
+        });
+
+        req.write(postData);
+        req.end();
+    });
+}
+
+async function callOpenCode(model, prompt) {
+    return new Promise((resolve, reject) => {
+        const args = ['run', '--format', 'json'];
+        
+        if (model) {
+            args.push('--model', model);
+        }
+        
+        args.push('--', prompt);
 
         const customEnv = {
             ...process.env,
             ANTHROPIC_BASE_URL: process.env.MINIOC_BASE_URL,
-            ANTHROPIC_AUTH_TOKEN: process.env.MINIOC_API_KEY,
-            OPENCODE_MODEL: process.env.MINIOC_MODEL
+            ANTHROPIC_AUTH_TOKEN: process.env.MINIOC_API_KEY
         };
 
-        logger.debug(`ENV - API_KEY: ${customEnv.ANTHROPIC_AUTH_TOKEN ? 'set' : 'MISSING'}`);
-        logger.debug(`ENV - BASE_URL: ${customEnv.ANTHROPIC_BASE_URL || 'NOT SET'}`);
-        logger.debug(`ENV - MODEL: ${customEnv.OPENCODE_MODEL || 'NOT SET'}`);
+        logger.debug(`OpenCode - MODEL: ${model}`);
 
-        if (!customEnv.ANTHROPIC_AUTH_TOKEN && !process.env.NODE_ENV?.includes('test')) {
-            reject(new Error('MINIOC_API_KEY is not set in .env'));
-            return;
-        }
-
-        const child = spawn('opencode', args, { env: customEnv });
+        const child = spawn('opencode', args, { env: customEnv, stdio: ['ignore', 'pipe', 'pipe'] });
         
         let stdout = '';
         let stderr = '';
@@ -39,8 +87,6 @@ async function processMessage(userId, message, history) {
             clearTimeout(timeoutId);
             const errorMsg = error?.message || 'Unknown error';
             logger.error(`Failed to spawn opencode process: ${errorMsg}`, error);
-            logger.error('Possible causes: opencode not installed or not in PATH');
-            logger.error('Solution: Run "curl -fsSL https://opencode.ai/install | bash" to install opencode');
             reject(new Error(`Failed to spawn opencode: ${errorMsg}`));
         });
 
@@ -58,44 +104,73 @@ async function processMessage(userId, message, history) {
             
             if (code !== 0) {
                 logger.error(`opencode exited with code ${code}`);
-                
-                if (stdout.includes('Positionals:')) {
-                    logger.error('opencode command format error');
-                    logger.error(`stdout: ${stdout}`);
-                    logger.error(`stderr: ${stderr}`);
-                    reject(new Error(stderr || `opencode failed with exit code ${code}`));
-                    return;
-                }
-                
-                if (stderr.includes('authentication') || stderr.includes('auth')) {
-                    logger.error('Authentication failed - check MINIOC_API_KEY');
-                    reject(new Error('Authentication failed - please check MINIOC_API_KEY'));
-                    return;
-                }
-                
-                if (stderr.includes('rate limit')) {
-                    logger.error('Rate limit exceeded - wait before retrying');
-                    reject(new Error('Rate limit exceeded - please wait and try again'));
-                    return;
-                }
-                
                 reject(new Error(stderr || `opencode failed with exit code ${code}`));
                 return;
             }
             
-            logger.success(`opencode completed successfully for user ${userId}`);
-            const cleanOutput = stdout.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '').trim();
+            let cleanOutput = stdout.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '').trim();
+            
+            try {
+                const lines = cleanOutput.split('\n');
+                for (const line of lines) {
+                    const obj = JSON.parse(line);
+                    if (obj.type === 'text' && obj.part?.text) {
+                        cleanOutput = obj.part.text;
+                        break;
+                    }
+                }
+            } catch (e) {
+                // Not JSON, use as-is
+            }
+            
             resolve(cleanOutput);
         });
 
         timeoutId = setTimeout(() => {
             child.kill();
             logger.error('opencode timed out after 60 seconds');
-            logger.error('Possible causes: model is slow to respond or network issues');
-            logger.error('Solution: Try again or check network connection');
             reject(new Error('opencode timed out after 60 seconds'));
         }, 60000);
     });
+}
+
+async function processMessage(userId, message, history) {
+    const prompt = buildPrompt(userId, message, history);
+    const apiKey = process.env.MINIOC_API_KEY;
+    const baseURL = process.env.MINIOC_BASE_URL || 'https://api.minimax.io';
+    const model = process.env.MINIOC_MODEL || 'MiniMax-M2.5';
+
+    if (!apiKey) {
+        throw new Error('MINIOC_API_KEY is not set in .env');
+    }
+
+    logger.info(`Processing message for user ${userId}`);
+
+    // Check if using opencode model
+    if (model.startsWith('opencode/')) {
+        logger.debug(`Using OpenCode mode`);
+        try {
+            const response = await callOpenCode(model, prompt);
+            logger.success(`AI response received for user ${userId}`);
+            return response;
+        } catch (error) {
+            logger.error(`OpenCode error: ${error.message}`);
+            throw error;
+        }
+    }
+
+    // Use MiniMax API directly
+    logger.debug(`API - BASE_URL: ${baseURL}`);
+    logger.debug(`API - MODEL: ${model}`);
+
+    try {
+        const response = await callMiniMaxAPI(apiKey, baseURL, model, prompt);
+        logger.success(`AI response received for user ${userId}`);
+        return response;
+    } catch (error) {
+        logger.error(`AI API error: ${error.message}`);
+        throw error;
+    }
 }
 
 module.exports = { processMessage, buildPrompt };
