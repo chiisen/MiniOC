@@ -9,6 +9,9 @@ const { spawn } = require('child_process');
 describe('ai.js - processMessage', () => {
     beforeEach(() => {
         spawn.mockReset();
+        process.env.MINIOC_API_KEY = 'test-key';
+        process.env.MINIOC_BASE_URL = 'https://test.api';
+        process.env.MINIOC_MODEL = 'test-model';
     });
 
     test('processMessage should call opencode with correct prompt', async () => {
@@ -29,14 +32,12 @@ describe('ai.js - processMessage', () => {
     });
 
     test('processMessage should set correct environment variables', async () => {
-        process.env.MINIOC_API_KEY = 'test-key';
-        process.env.MINIOC_BASE_URL = 'https://test.api';
-        process.env.MINIOC_MODEL = 'test-model';
-
         const mockChild = {
             stdout: { on: jest.fn((event, cb) => cb('response')) },
             stderr: { on: jest.fn() },
-            on: jest.fn((event, cb) => cb(0))
+            on: jest.fn((event, cb) => {
+                if (event === 'close') cb(0);
+            })
         };
         spawn.mockReturnValue(mockChild);
 
@@ -54,7 +55,9 @@ describe('ai.js - processMessage', () => {
         const mockChild = {
             stdout: { on: jest.fn((event, cb) => cb('Positionals: error')) },
             stderr: { on: jest.fn((event, cb) => cb('error message')) },
-            on: jest.fn((event, cb) => cb(1))
+            on: jest.fn((event, cb) => {
+                if (event === 'close') cb(1);
+            })
         };
         spawn.mockReturnValue(mockChild);
 
@@ -65,7 +68,9 @@ describe('ai.js - processMessage', () => {
         const mockChild = {
             stdout: { on: jest.fn((event, cb) => cb('\x1b[32mGreen text\x1b[0m')) },
             stderr: { on: jest.fn() },
-            on: jest.fn((event, cb) => cb(0))
+            on: jest.fn((event, cb) => {
+                if (event === 'close') cb(0);
+            })
         };
         spawn.mockReturnValue(mockChild);
 

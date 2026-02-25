@@ -1,29 +1,34 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+const logger = require('./logger');
 const { initBot } = require('./bot');
-const { initDatabase, clearAllConversations } = require('./db');
+const { initDatabase, clearAllConversations, closeDatabase } = require('./db');
 
-const LOCK_FILE = path.join(__dirname, '..', 'data', 'bot.lock');
+const LOCK_FILE = path.join(process.cwd(), 'data', 'bot.lock');
 
 function acquireLock() {
     try {
         if (fs.existsSync(LOCK_FILE)) {
             const pid = fs.readFileSync(LOCK_FILE, 'utf8').trim();
-            console.log(`🔍 Found existing lock file, PID: ${pid}`);
+            logger.warn(`Found existing lock file, PID: ${pid}`);
+            
             try {
                 process.kill(parseInt(pid), 'SIGKILL');
-                console.log(`🔪 Killed process ${pid}`);
+                logger.info(`Killed old process: ${pid}`);
             } catch (e) {
-                console.log(`⚠️ Could not kill process ${pid}: ${e.message}`);
+                logger.warn(`Could not kill process ${pid}: ${e.message}`);
             }
+            
             fs.unlinkSync(LOCK_FILE);
         }
+        
         fs.writeFileSync(LOCK_FILE, process.pid.toString());
-        console.log(`🔒 Lock acquired, PID: ${process.pid}`);
+        logger.info(`Lock acquired, PID: ${process.pid}`);
         return true;
     } catch (e) {
-        console.error('❌ Failed to acquire lock:', e.message);
+        logger.error('Failed to acquire lock', e);
+        logger.error('Possible causes: data folder is read-only or locked by another process');
         return false;
     }
 }
@@ -32,33 +37,64 @@ function releaseLock() {
     try {
         if (fs.existsSync(LOCK_FILE)) {
             fs.unlinkSync(LOCK_FILE);
-            console.log('🔓 Lock released');
+            logger.info('Lock released');
         }
-    } catch (e) {}
+    } catch (e) {
+        logger.error('Failed to release lock', e);
+    }
 }
 
 async function main() {
-    console.log('🤖 Starting Telegram AI Agent...');
+    logger.info('========================================');
+    logger.info('Starting Telegram AI Agent...');
+    logger.info('========================================');
     
     if (!acquireLock()) {
-        console.error('❌ Could not acquire lock, exiting');
+        logger.error('Could not acquire lock, exiting');
         process.exit(1);
     }
     
-    process.on('exit', releaseLock);
-    process.on('SIGINT', releaseLock);
-    process.on('SIGTERM', releaseLock);
-    
-    initDatabase();
-    clearAllConversations();
-    console.log('✅ Database initialized and cleared');
+    process.on('exit', () => {
+        releaseLock();
+        closeDatabase();
+    });
+    process.on('SIGINT', () => {
+        logger.info('SIGINT received, shutting down...');
+        releaseLock();
+        closeDatabase();
+    });
+    process.on('SIGTERM', () => {
+        logger.info('SIGTERM received, shutting down...');
+        releaseLock();
+        closeDatabase();
+    });
 
-    await initBot();
-    console.log('✅ Bot started and listening for messages');
+    try {
+        initDatabase();
+    } catch (error) {
+        logger.error('Failed to initialize database', error);
+        logger.error('Possible causes: SQLite not installed, data folder permission issue, or disk full');
+        logger.error('Solution: Check data folder permissions and reinstall dependencies');
+        releaseLock();
+        process.exit(1);
+    }
+
+    try {
+        clearAllConversations();
+    } catch (error) {
+        logger.error('Failed to clear conversations', error);
+    }
+
+    try {
+        await initBot();
+    } catch (error) {
+        logger.error('Failed to initialize bot', error);
+        releaseLock();
+        closeDatabase();
+        process.exit(1);
+    }
+    
+    logger.success('Bot started and listening for messages');
 }
 
-main().catch(err => {
-    console.error('❌ Failed to start:', err);
-    releaseLock();
-    process.exit(1);
-});
+main();
