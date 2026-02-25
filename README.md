@@ -14,3 +14,4 @@
 ### Docker 網絡
 - 需要使用 `family: 4` 強制 IPv4
 - 容器使用 `network_mode: host` 避免 DNS 問題
+- **已修復**：在啟動腳本中添加 `--dns-result-order=ipv4first` 強制 IPv4 優先
